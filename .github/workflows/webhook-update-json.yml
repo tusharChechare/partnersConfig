@@ -1,4 +1,4 @@
-name: Update JSON from Webhook
+name: Update JSON Files from Webhook
 
 on:
   repository_dispatch:
@@ -17,9 +17,30 @@ jobs:
           git fetch origin
           git checkout config-deployment || git checkout -b config-deployment
 
-      - name: Write webhook payload to JSON
+      - name: Process restaurant configs by status
         run: |
-          echo '${{ toJson(github.event.client_payload.config) }}' > restaurants-config.json
+          echo '${{ toJson(github.event.client_payload.config) }}' > all.json
+          mkdir -p restaurants
+
+          jq -c '.[]' all.json | while read -r item; do
+            id=$(echo "$item" | jq -r '."Restaurant ID"' | tr -cd '[:alnum:]_-')
+            status=$(echo "$item" | jq -r '."Status"' | tr '[:upper:]' '[:lower:]' | xargs)
+            file="restaurants/${id}.json"
+
+            if [[ "$status" == "active" ]]; then
+              echo "$item" > "$file"
+              echo "✅ Created/Updated $file"
+            else
+              if [[ -f "$file" ]]; then
+                rm "$file"
+                echo "🗑️ Deleted $file (status: $status)"
+              else
+                echo "ℹ️  No existing file for $id to delete (status: $status)"
+              fi
+            fi
+          done
+
+          rm all.json
 
       - name: Commit and push if changed
         env:
@@ -27,7 +48,7 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add restaurants-config.json
-          git diff --cached --quiet || git commit -m "Update config JSON from webhook"
+          git add restaurants/
+          git diff --cached --quiet || git commit -m "Sync restaurant JSONs based on status"
           git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}
           git push origin config-deployment
