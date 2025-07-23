@@ -23,8 +23,8 @@ jobs:
           mkdir -p restaurants
 
           jq -c '.[]' all.json | while read -r item; do
-            id=$(echo "$item" | jq -r '."Restaurant ID"' | tr -cd '[:alnum:]_-')
-            status=$(echo "$item" | jq -r '."Status"' | tr '[:upper:]' '[:lower:]' | xargs)
+            id=$(echo "$item" | jq -r '."restaurantId" // ."Restaurant ID"' | tr -cd '[:alnum:]_-')
+            status=$(echo "$item" | jq -r '."status" // ."Status"' | tr '[:upper:]' '[:lower:]' | xargs)
             file="restaurants/${id}.json"
 
             if [[ "$status" == "active" ]]; then
