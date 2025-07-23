@@ -25,5 +25,6 @@ jobs:
           git add restaurants-config.json
           git diff --cached --quiet || git commit -m "Update config JSON from webhook"
           git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}
-          git push origin HEAD
+          git push origin gh-pages
+
 
